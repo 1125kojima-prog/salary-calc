@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>バイト給与計算ツール</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+<main>
+  <header>
+    <h1>給与計算</h1>
+    <p class="lead">時給のルールと出勤日から、その月の給与の目安を出します。</p>
+  </header>
+
+  <div class="slip">
+    <form id="form" novalidate>
+      <section id="settings">
+        <h2>時給の設定</h2>
+        <p class="hint-text">割増は会社ごとに違います。率と時間帯を入力してください。率が空欄か0%なら、その割増はありません。</p>
+        <div class="row">
+          <label for="wageWeekday">平日の時給</label>
+          <span class="entry"><input id="wageWeekday" type="number" inputmode="decimal" min="0" step="any" placeholder="1100"><span class="unit">円</span></span>
+        </div>
+        <div class="row">
+          <label for="wageSaturday">土曜の時給 <span class="hint">任意</span></label>
+          <span class="entry"><input id="wageSaturday" type="number" inputmode="decimal" min="0" step="any" placeholder="平日と同じ"><span class="unit">円</span></span>
+        </div>
+        <div class="row">
+          <label for="wageSunday">日曜の時給 <span class="hint">任意</span></label>
+          <span class="entry"><input id="wageSunday" type="number" inputmode="decimal" min="0" step="any" placeholder="平日と同じ"><span class="unit">円</span></span>
+        </div>
+        <div class="row">
+          <label for="wageHoliday">祝日の時給 <span class="hint">任意</span></label>
+          <span class="entry"><input id="wageHoliday" type="number" inputmode="decimal" min="0" step="any" placeholder="平日と同じ"><span class="unit">円</span></span>
+        </div>
+        <p class="hint-text gap">会社によって早朝、深夜の時間帯の定義が異なるため以下で調整してください。</p>
+        <div class="row">
+          <label for="earlyPercent">早朝割増</label>
+          <span class="entry"><input id="earlyPercent" type="number" inputmode="decimal" min="0" max="100" step="any" placeholder="なし"><span class="unit">%</span></span>
+        </div>
+        <div class="row band">
+          <label for="earlyStart">早朝の時間帯</label>
+          <span class="entry"><input id="earlyStart" type="time"><span class="unit">〜</span><input id="earlyEnd" type="time"></span>
+        </div>
+        <div class="row">
+          <label for="nightPercent">深夜割増</label>
+          <span class="entry"><input id="nightPercent" type="number" inputmode="decimal" min="0" max="100" step="any" placeholder="なし"><span class="unit">%</span></span>
+        </div>
+        <div class="row band">
+          <label for="nightStart">深夜の時間帯</label>
+          <span class="entry"><input id="nightStart" type="time"><span class="unit">〜</span><input id="nightEnd" type="time"></span>
+        </div>
+
+        <h3>いつもの勤務</h3>
+        <p class="hint-text">出勤日をタップすると、この時間で入ります。日ごとの変更もできます。</p>
+        <div class="row">
+          <label for="defStart">開始</label>
+          <span class="entry"><input id="defStart" type="time"><span class="unit"></span></span>
+        </div>
+        <div class="row">
+          <label for="defEnd">終了</label>
+          <span class="entry"><input id="defEnd" type="time"><span class="unit"></span></span>
+        </div>
+        <div class="row">
+          <label for="defBreak">休憩</label>
+          <span class="entry"><input id="defBreak" type="number" inputmode="numeric" min="0" step="1"><span class="unit">分</span></span>
+        </div>
+      </section>
+
+      <section>
+        <h2>出勤日</h2>
+        <div id="monthTabs" class="tabs"></div>
+        <p id="calHeading" class="cal-heading"></p>
+        <div id="calGrid" class="cal"></div>
+        <p class="hint-text">日付をタップで出勤、もう一度タップで取り消しです。赤は日曜と祝日、青は土曜です。</p>
+        <div id="calError" class="errors" role="alert" hidden></div>
+
+        <div id="dayEditor" hidden>
+          <h3 id="editTitle"></h3>
+          <div class="row">
+            <label for="editStart">開始</label>
+            <span class="entry"><input id="editStart" type="time"><span class="unit"></span></span>
+          </div>
+          <div class="row">
+            <label for="editEnd">終了</label>
+            <span class="entry"><input id="editEnd" type="time"><span class="unit"></span></span>
+          </div>
+          <div class="row">
+            <label for="editBreak">休憩</label>
+            <span class="entry"><input id="editBreak" type="number" inputmode="numeric" min="0" step="1"><span class="unit">分</span></span>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="row">
+          <label for="bonus">ボーナス <span class="hint">この月・任意</span></label>
+          <span class="entry"><input id="bonus" type="number" inputmode="decimal" min="0" step="any" placeholder="0"><span class="unit">円</span></span>
+        </div>
+      </section>
+
+      <div id="errors" class="errors" role="alert" hidden></div>
+      <button type="submit" class="primary">計算する</button>
+    </form>
+
+    <section id="result" aria-live="polite" hidden>
+      <p class="hero-label" id="outTitle"></p>
+      <p class="hero-value"><span id="outTotal"></span></p>
+      <dl>
+        <div class="result-row"><dt>勤務分の給与</dt><dd id="outShiftPay"></dd></div>
+        <div class="result-row" id="bonusRow"><dt>ボーナス</dt><dd id="outBonus"></dd></div>
+        <div class="result-row"><dt>出勤日数</dt><dd id="outDays"></dd></div>
+        <div class="result-row"><dt>労働時間</dt><dd id="outHours"></dd></div>
+        <div class="result-row"><dt>うち割増の時間</dt><dd id="outNight"></dd></div>
+      </dl>
+      <details>
+        <summary>日ごとの内訳</summary>
+        <div id="outBreakdown"></div>
+      </details>
+      <p class="note">祝日は内閣府の祝日データで判定します。税・社会保険料は考慮していません。</p>
+      <button type="button" id="saveBtn" class="secondary">この結果を保存</button>
+      <p id="saveStatus" class="note" role="status"></p>
+    </section>
+  </div>
+
+  <section class="slip history" aria-labelledby="historyTitle">
+    <h2 id="historyTitle">保存した記録</h2>
+    <p id="yearTotal" class="year-total" hidden></p>
+    <p id="historyEmpty" class="hint-text">まだありません。計算のあとに「この結果を保存」を押すと、ここに残ります。</p>
+    <div id="historyList"></div>
+    <p class="note">記録はこのブラウザの中にだけ保存されます。サーバーには送りません。</p>
+  </section>
+</main>
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>
