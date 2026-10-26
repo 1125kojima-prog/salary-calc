@@ -3,8 +3,8 @@ import assert from 'node:assert/strict'
 import { calcShift, dayKind, holidayName, parseRules, shiftError } from './salary.ts'
 
 const hm = (h: number, m = 0) => h * 60 + m
-const night = { rate: 0.25, start: hm(22), end: hm(5) }
-const early = { rate: 0.2, start: hm(5), end: hm(8) }
+const night = { wage: 1250, start: hm(22), end: hm(5) }
+const early = { wage: 1200, start: hm(5), end: hm(8) }
 const rules = { weekday: 1000, saturday: 1100, sunday: 1200, holiday: 1500, premiums: [night] }
 // 2026-10-21 水 / 10-24 土 / 10-25 日 / 10-12 月(スポーツの日) / 05-03 日(憲法記念日)
 const shift = (date: string, start: string, end: string, breakMin = 0) => ({ date, start, end, breakMin })
@@ -65,7 +65,7 @@ test('休憩は通常時給で差し引く', () => {
 
 test('早朝割増は設定した時間帯だけ付く', () => {
   const both = { ...rules, premiums: [night, early] }
-  // 4-5時は深夜25%、5-7時は早朝20%
+  // 4-5時は深夜1250円、5-7時は早朝1200円
   const r = calcShift(shift('2026-10-21', '04:00', '07:00'), both)
   assert.equal(r.pay, 1250 + 2 * 1200)
   assert.equal(r.premiumMinutes, 180)
@@ -73,9 +73,9 @@ test('早朝割増は設定した時間帯だけ付く', () => {
   assert.equal(calcShift(shift('2026-10-21', '05:00', '07:00'), rules).pay, 2000)
 })
 
-test('割増の時間帯が重なったら高いほうの率だけ', () => {
-  const overlap = { ...rules, premiums: [night, { rate: 0.5, start: hm(23), end: hm(1) }] }
-  // 22-23時は25%、23-24時は重なって50%
+test('割増の時間帯が重なったら高いほうの時給だけ', () => {
+  const overlap = { ...rules, premiums: [night, { wage: 1500, start: hm(23), end: hm(1) }] }
+  // 22-23時は1250円、23-24時は重なって1500円
   assert.equal(calcShift(shift('2026-10-21', '22:00', '00:00'), overlap).pay, 1250 + 1500)
 })
 
@@ -92,10 +92,10 @@ const raw = {
   saturday: '',
   sunday: '',
   holiday: '',
-  nightPercent: '25',
+  nightWage: '1250',
   nightStart: '22:00',
   nightEnd: '05:00',
-  earlyPercent: '',
+  earlyWage: '',
   earlyStart: '05:00',
   earlyEnd: '08:00',
 }
@@ -103,7 +103,7 @@ const raw = {
 test('時給ルールの入力チェック', () => {
   assert.equal(parseRules({ ...raw, weekday: '' }).errors.length, 1)
   assert.equal(parseRules({ ...raw, holiday: '-1' }).errors.length, 1)
-  assert.equal(parseRules({ ...raw, nightPercent: '101' }).errors.length, 1)
+  assert.equal(parseRules({ ...raw, nightWage: '-1' }).errors.length, 1)
   const ok = parseRules({ ...raw, saturday: '1100', holiday: '1500' })
   assert.deepEqual(ok.rules, {
     weekday: 1000,
@@ -115,16 +115,16 @@ test('時給ルールの入力チェック', () => {
   assert.deepEqual(ok.errors, [])
 })
 
-test('割増率が空欄か0なら時間帯は見ない', () => {
-  assert.deepEqual(parseRules({ ...raw, nightPercent: '' }).rules.premiums, [])
-  const r = parseRules({ ...raw, nightPercent: '0', earlyPercent: '', earlyStart: '', earlyEnd: '' })
+test('割増時給が空欄か0なら時間帯は見ない', () => {
+  assert.deepEqual(parseRules({ ...raw, nightWage: '' }).rules.premiums, [])
+  const r = parseRules({ ...raw, nightWage: '0', earlyWage: '', earlyStart: '', earlyEnd: '' })
   assert.deepEqual(r.rules.premiums, [])
   assert.deepEqual(r.errors, [])
 })
 
-test('割増率があるのに時間帯が不正ならエラー', () => {
-  assert.equal(parseRules({ ...raw, earlyPercent: '20', earlyStart: '', earlyEnd: '08:00' }).errors.length, 1)
-  assert.equal(parseRules({ ...raw, earlyPercent: '20', earlyStart: '06:00', earlyEnd: '06:00' }).errors.length, 1)
-  const ok = parseRules({ ...raw, earlyPercent: '20' })
+test('割増時給があるのに時間帯が不正ならエラー', () => {
+  assert.equal(parseRules({ ...raw, earlyWage: '1200', earlyStart: '', earlyEnd: '08:00' }).errors.length, 1)
+  assert.equal(parseRules({ ...raw, earlyWage: '1200', earlyStart: '06:00', earlyEnd: '06:00' }).errors.length, 1)
+  const ok = parseRules({ ...raw, earlyWage: '1200' })
   assert.deepEqual(ok.rules.premiums, [night, early])
 })

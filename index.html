@@ -19,7 +19,7 @@
     <form id="form" novalidate>
       <section id="settings">
         <h2>時給の設定</h2>
-        <p class="hint-text">割増は会社ごとに違います。率と時間帯を入力してください。率が空欄か0%なら、その割増はありません。</p>
+        <p class="hint-text">割増は会社ごとに違います。時間帯と、その時間帯の時給を入力してください。時給が空欄か0円なら、その割増はありません。</p>
         <div class="row">
           <label for="wageWeekday">平日の時給</label>
           <span class="entry"><input id="wageWeekday" type="number" inputmode="decimal" min="0" step="any" placeholder="1100"><span class="unit">円</span></span>
@@ -38,16 +38,16 @@
         </div>
         <p class="hint-text gap">会社によって早朝、深夜の時間帯の定義が異なるため以下で調整してください。</p>
         <div class="row">
-          <label for="earlyPercent">早朝割増</label>
-          <span class="entry"><input id="earlyPercent" type="number" inputmode="decimal" min="0" max="100" step="any" placeholder="なし"><span class="unit">%</span></span>
+          <label for="earlyWage">早朝の時給</label>
+          <span class="entry"><input id="earlyWage" type="number" inputmode="decimal" min="0" step="any" placeholder="なし"><span class="unit">円</span></span>
         </div>
         <div class="row band">
           <label for="earlyStart">早朝の時間帯</label>
           <span class="entry"><input id="earlyStart" type="time"><span class="unit">〜</span><input id="earlyEnd" type="time"></span>
         </div>
         <div class="row">
-          <label for="nightPercent">深夜割増</label>
-          <span class="entry"><input id="nightPercent" type="number" inputmode="decimal" min="0" max="100" step="any" placeholder="なし"><span class="unit">%</span></span>
+          <label for="nightWage">深夜の時給</label>
+          <span class="entry"><input id="nightWage" type="number" inputmode="decimal" min="0" step="any" placeholder="なし"><span class="unit">円</span></span>
         </div>
         <div class="row band">
           <label for="nightStart">深夜の時間帯</label>

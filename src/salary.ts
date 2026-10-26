@@ -2,8 +2,8 @@ import holiday_jp from '@holiday-jp/holiday_jp'
 
 /** 割増の時間帯。start/end は 0時からの分で、end <= start なら日をまたぐ */
 export interface Premium {
-  /** 0.25 なら 25% 増 */
-  rate: number
+  /** この時間帯の時給(円)。通常の時給の代わりに適用する */
+  wage: number
   start: number
   end: number
 }
@@ -61,21 +61,21 @@ export function parseAmount(
   return { value: n }
 }
 
-/** 割増率が空欄または0なら割増なし。率があるときだけ時間帯を検証する */
+/** 割増時給が空欄または0なら割増なし。時給があるときだけ時間帯を検証する */
 function parsePremium(
   label: string,
-  percent: unknown,
+  wage: unknown,
   start: unknown,
   end: unknown,
 ): { premium?: Premium; errors: string[] } {
-  const p = parseAmount(`${label}割増`, percent, { max: 100 })
+  const p = parseAmount(`${label}の時給`, wage)
   if (p.error) return { errors: [p.error] }
   if (!p.value) return { errors: [] }
   const s = toMinutes(String(start))
   const e = toMinutes(String(end))
   if (s === null || e === null) return { errors: [`${label}割増の時間帯(開始と終了)を入力してください。`] }
   if (s === e) return { errors: [`${label}割増の開始と終了が同じ時刻です。`] }
-  return { premium: { rate: p.value / 100, start: s, end: e }, errors: [] }
+  return { premium: { wage: p.value, start: s, end: e }, errors: [] }
 }
 
 export interface RawRules {
@@ -83,10 +83,10 @@ export interface RawRules {
   saturday: unknown
   sunday: unknown
   holiday: unknown
-  nightPercent: unknown
+  nightWage: unknown
   nightStart: unknown
   nightEnd: unknown
-  earlyPercent: unknown
+  earlyWage: unknown
   earlyStart: unknown
   earlyEnd: unknown
 }
@@ -96,8 +96,8 @@ export function parseRules(raw: RawRules): { rules: Rules; errors: string[] } {
   const saturday = parseAmount('土曜の時給', raw.saturday)
   const sunday = parseAmount('日曜の時給', raw.sunday)
   const holiday = parseAmount('祝日の時給', raw.holiday)
-  const night = parsePremium('深夜', raw.nightPercent, raw.nightStart, raw.nightEnd)
-  const early = parsePremium('早朝', raw.earlyPercent, raw.earlyStart, raw.earlyEnd)
+  const night = parsePremium('深夜', raw.nightWage, raw.nightStart, raw.nightEnd)
+  const early = parsePremium('早朝', raw.earlyWage, raw.earlyStart, raw.earlyEnd)
   const errors = [weekday, saturday, sunday, holiday].flatMap((r) => (r.error ? [r.error] : []))
   errors.push(...night.errors, ...early.errors)
   const premiums = [night.premium, early.premium].filter((p): p is Premium => !!p)
@@ -163,7 +163,7 @@ export function shiftError(shift: Shift): string | null {
 /**
  * 1勤務の給与。shiftError が null の勤務だけ渡す。
  * shortcut: 曜日・祝日の判定は開始日のみ(日またぎで翌日が休日でも開始日の時給)、休憩はその日の通常時給で差し引く。
- * 割増の時間帯が重なった分は高いほうの率だけ適用する(加算しない)。
+ * 割増の時間帯が重なった分は高いほうの時給だけ適用する(加算しない)。
  */
 export function calcShift(shift: Shift, rules: Rules): ShiftPay {
   const s = toMinutes(shift.start)!
@@ -174,13 +174,13 @@ export function calcShift(shift: Shift, rules: Rules): ShiftPay {
   let premiumMinutes = 0
   for (let t = s; t < s + total; t++) {
     const tod = t % DAY
-    let rate = 0
+    let bandWage = 0
     for (const p of rules.premiums) {
       const inBand = p.start < p.end ? tod >= p.start && tod < p.end : tod >= p.start || tod < p.end
-      if (inBand) rate = Math.max(rate, p.rate)
+      if (inBand) bandWage = Math.max(bandWage, p.wage)
     }
-    if (rate > 0) premiumMinutes++
-    pay += (wage / 60) * (1 + rate)
+    if (bandWage > 0) premiumMinutes++
+    pay += (bandWage || wage) / 60
   }
   pay -= shift.breakMin * (wage / 60)
   return { minutes: total - shift.breakMin, premiumMinutes, pay: Math.round(pay) }

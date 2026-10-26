@@ -6,10 +6,10 @@ export interface Settings {
   saturday: string
   sunday: string
   holiday: string
-  nightPercent: string
+  nightWage: string
   nightStart: string
   nightEnd: string
-  earlyPercent: string
+  earlyWage: string
   earlyStart: string
   earlyEnd: string
   start: string
@@ -40,10 +40,10 @@ const defaultSettings: Settings = {
   saturday: '',
   sunday: '',
   holiday: '',
-  nightPercent: '',
+  nightWage: '',
   nightStart: '22:00',
   nightEnd: '05:00',
-  earlyPercent: '',
+  earlyWage: '',
   earlyStart: '05:00',
   earlyEnd: '08:00',
   start: '17:00',
@@ -57,7 +57,8 @@ function isEntry(e: any): e is HistoryEntry {
     typeof e.pay === 'number' &&
     typeof e.days === 'number' &&
     typeof e.minutes === 'number' &&
-    Array.isArray(e.rules?.premiums) && // 時給ルールの形式が違う古い記録は読み飛ばす
+    Array.isArray(e.rules?.premiums) &&
+    e.rules.premiums.every((p: any) => typeof p?.wage === 'number') && // 時給ルールの形式が違う古い記録は読み飛ばす
     'holiday' in e.rules &&
     Array.isArray(e.shifts)
   )
@@ -66,8 +67,6 @@ function isEntry(e: any): e is HistoryEntry {
 export function load(): Stored {
   try {
     const raw = JSON.parse(localStorage.getItem(KEY) ?? 'null')
-    // 一時対応: 旧初期値の25が残っている動作確認用ブラウザを「なし」に戻す。確認後に削除する
-    if (raw?.settings?.nightPercent === '25') raw.settings.nightPercent = ''
     return {
       settings: { ...defaultSettings, ...raw?.settings },
       history: Array.isArray(raw?.history) ? raw.history.filter(isEntry) : [],
